@@ -84,7 +84,7 @@ motor_control motor_1;
 motor_control motor_2;
 
 void setup() {
-
+  Serial.begin(9600);
   // getMAC address
   WiFi.mode(WIFI_MODE_STA);
   Serial.println(WiFi.macAddress());
@@ -109,7 +109,7 @@ void setup() {
   motor_1.in_2 = IN1B_Pin;
   motor_1.stop();
 
-  Serial.begin(9600);
+  
   tmp = HIGH;
 
   // setup ESPnow to recieve from remote control

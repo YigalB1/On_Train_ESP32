@@ -14,7 +14,7 @@ int SPEED_key = 15;
 void send_it();
 
 // Insert the RECEIVER MAC Address
-uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+uint8_t broadcastAddress[] = {0x10, 0x52, 0x1C, 0x5B, 0x0C, 0xCC};
 
 
 typedef struct struct_message {
@@ -31,8 +31,8 @@ esp_now_peer_info_t peerInfo;
 
 // callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  Serial.print("\r\nLast Packet Send Status:\t");
-  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  //Serial.print("\r\nLast Packet Send Status:\t");
+  //Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 } // of OnDataSent()
 
 
@@ -87,21 +87,37 @@ int speed = 0;
 void loop() {
   delay(200);
 
+  
+
   // start reading keys
-  STOP_pressed = digitalRead(STOP_key);
-  FWD_pressed  = digitalRead(FWD_key);
-  BCK_pressed  = digitalRead(BCK_key);
-  BUZ_pressed  = digitalRead(BUZ_key);
-  speed = analogRead(SPEED_key);
+  STOP_pressed = !digitalRead(STOP_key);
+  FWD_pressed  = !digitalRead(FWD_key);
+  BCK_pressed  = !digitalRead(BCK_key);
+  BUZ_pressed  = !digitalRead(BUZ_key);
+  //speed = analogRead(SPEED_key);
+
+  Serial.print("---->");
+  Serial.print(STOP_pressed);
+  Serial.print("....");
+  Serial.print(FWD_pressed);
+  Serial.print("....");
+  Serial.print(BCK_pressed);
+  Serial.print("....");
+  Serial.print(BUZ_pressed);
+  Serial.println("....");
+
+
   
 
   if (STOP_pressed) {
+    //Serial.println("xx");
     TrainCMD.stop = true;
     TrainCMD.fwd  = false;
     TrainCMD.bck  = false;
     TrainCMD.speed = 0;
     TrainCMD.buzz = BUZ_pressed;
     TrainCMD.buzz_time = buzz_time;
+    Serial.println("sending stop");
     send_it();
     return;
   } // of if()
@@ -113,6 +129,7 @@ void loop() {
     TrainCMD.speed = speed;
     TrainCMD.buzz = BUZ_pressed;
     TrainCMD.buzz_time = buzz_time;
+    Serial.println("sending FWD");
     send_it();
     return;
   } // of if()
@@ -124,6 +141,7 @@ void loop() {
     TrainCMD.speed = speed;
     TrainCMD.buzz = BUZ_pressed;
     TrainCMD.buzz_time = buzz_time;
+    Serial.println("sending BCK");
     send_it();
     return;
   } // of if()
@@ -135,9 +153,16 @@ void loop() {
   if (BUZ_pressed) {
     TrainCMD.buzz = true;
     TrainCMD.buzz_time = buzz_time;
+    Serial.println("sending BUZZ");
     send_it();
     return;
   } // of if()
+
+  // None pressed, reset variables
+  STOP_pressed = false;
+  FWD_pressed  = false;
+  BCK_pressed  = false;
+  BUZ_pressed  = false;
   
 
 } // of loop()
@@ -150,7 +175,7 @@ void send_it() {
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &TrainCMD, sizeof(TrainCMD));
    
   if (result == ESP_OK) {
-    Serial.println("Sent with success");
+    //Serial.println("Sent with success");
   } // of if()
   else {
     Serial.println("Error sending the data");
