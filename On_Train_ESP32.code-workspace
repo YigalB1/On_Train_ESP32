@@ -6,6 +6,9 @@
 		{
 			"name": "On_Train_ESP32",
 			"path": "On_Train_ESP32"
+		},
+		{
+			"path": "Train_remote"
 		}
 	],
 	"settings": {}
