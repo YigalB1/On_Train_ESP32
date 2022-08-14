@@ -9,6 +9,10 @@
 		},
 		{
 			"path": "Train_remote"
+		},
+		{
+			"name": "Train_remote_wemos",
+			"path": "Train_remote_wemos"
 		}
 	],
 	"settings": {}
