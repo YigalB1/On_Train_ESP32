@@ -13,6 +13,9 @@ int BUZ_key =  4;
 int buzz_time = 300; // in ms
 int SPEED_key = 12;
 
+int ADC_pin = A0;
+
+
 bool pckg_recieved = false; // to know when a new package was recieved
 
 void send_it();
@@ -115,10 +118,18 @@ unsigned long time_now = 0;
 
 void loop() {
 
+//ADC_val = analogRead(ADC_pin);  // This reads the analog in value
+//  Serial.print(ADC_val);
+//  return;
+
+
   time_now = millis();
   while(millis() < time_now + period){
         //wait approx. [period] ms
     }
+
+
+
 
 
   if (pckg_recieved) {

@@ -20,9 +20,6 @@ int IN2B_Pin =  4 ;
 
 int Temperature_pin = 15; // temperature sensor
 
-
-
-
 // Setup a oneWire instance to communicate with any OneWire devices
 OneWire oneWire(Temperature_pin);
 // Pass our oneWire reference to Dallas Temperature sensor 
@@ -171,14 +168,10 @@ void setup() {
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
     Serial.println("Failed to add peer");
     return;
-  }
-
-
-
+  } // of if()
 
 // Start the DS18B20 sensor
   sensors.begin();
-
 
   Serial.println("end of Setup()");
 } // of setup()
@@ -190,8 +183,11 @@ int tmp_speed=777;
 // for delay function
 int period = 50;
 unsigned long time_now = 0;
+int ADC_val = 0;
 
 void loop() {
+
+  
 
   time_now = millis();
   while(millis() < time_now + period){
