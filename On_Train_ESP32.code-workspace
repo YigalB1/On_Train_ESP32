@@ -13,6 +13,10 @@
 		{
 			"name": "Train_remote_wemos",
 			"path": "Train_remote_wemos"
+		},
+		{
+			"name": "Wemos_ESP32_RC",
+			"path": "Wemos_ESP32_RC"
 		}
 	],
 	"settings": {}

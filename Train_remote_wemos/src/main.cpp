@@ -20,9 +20,10 @@ bool pckg_recieved = false; // to know when a new package was recieved
 
 void send_it();
 
-// RECEIVER MAC Address (Main board)
-uint8_t MAC_MAIN[] = {0x10, 0x52, 0x1C, 0x5B, 0x0C, 0xCC};
-
+// RECEIVER1 MAC Address (Main board)
+uint8_t MAC_1_MAIN[] = {0x10, 0x52, 0x1C, 0x5B, 0x0C, 0xCC};
+uint8_t MAC_2_MAIN[] = {0x84, 0xCC, 0xA8, 0x5F, 0x90, 0xA8};
+// RECEIVER2 MAC Address (Main board)
 
 typedef struct struct_message {
   bool stop;
@@ -60,9 +61,6 @@ void OnDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len) {
 }
 
 
-
-
-
 void setup() {
   Serial.begin(9600);
   Serial.println("Setup starting");
@@ -92,7 +90,8 @@ void setup() {
 
   // Register the peer
   //esp_now_add_peer(MAC_MAIN, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
-  esp_now_add_peer(MAC_MAIN, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+  esp_now_add_peer(MAC_1_MAIN, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+  esp_now_add_peer(MAC_2_MAIN, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
 
   // Register send callback function
   esp_now_register_send_cb(onSent);
