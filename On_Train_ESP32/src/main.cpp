@@ -4,6 +4,7 @@
 #include <OneWire.h> // for the temp sensor (one wire bus)
 #include <DallasTemperature.h>
 
+#include <classes.h>
 
 // LED1 is power ...
 int Led2_yellow = 21 ; 
@@ -11,23 +12,25 @@ int Led3_blue =   18 ;
 int Led4_green =   5 ; 
 int Buzzer_pin     =  23 ; 
 
-int EN1_Pin  = 13 ; // 35 is inpput only ! 
-int IN1A_Pin = 32 ;
-int IN1B_Pin = 14 ;  
+const int EN1_Pin  = 13 ; // 35 is inpput only ! 
+const int IN1A_Pin = 32 ;
+const int IN1B_Pin = 14 ;  
 
-int EN2_Pin  =  2 ;  
-int IN2A_Pin =  19 ;  
-int IN2B_Pin =  4 ;  
+const int EN2_Pin  =  2 ;  
+const int IN2A_Pin =  19 ;  
+const int IN2B_Pin =  4 ;  
 
 int Temperature_pin = 15; // temperature sensor
 
-const int trigPin = 26; 
-const int echoPin = 27;
-
+int trigPin1 = 26; 
+int echoPin1 = 27;
+const int trigPin2 = 33;  
+const int echoPin2 = 35; 
 
 // for PWM (driving motors)
 const int freq = 5000;
-const int ledChannel = 0;
+const int ledChannel0 = 0;
+const int ledChannel2 = 2;
 const int resolution = 8;
 
 void wait_millies(int _period);
@@ -78,63 +81,23 @@ void onSent(uint8_t *mac_addr, uint8_t sendStatus) {
 
 
 
-class motor_control {
-  public:
-  int en;
-  int in_1;
-  int in_2;
-  // each instance of class will have different motor
-  // in this case we have one motor
-
-void stop() {
-    digitalWrite(in_1, LOW); // 
-    digitalWrite(in_2, LOW); //
-    //digitalWrite(en,LOW); 
-        ledcWrite(ledChannel, 0);
-
-    digitalWrite(Led2_yellow, HIGH);
-    digitalWrite(Led3_blue, LOW);  
-    digitalWrite(Led4_green, LOW);
-    digitalWrite(Buzzer_pin, LOW);
-  } // of stop()
-
-  void go_fwd(int _speed) {
-    
-    digitalWrite(Led2_yellow, LOW);
-    digitalWrite(Led3_blue, HIGH);  
-    digitalWrite(Led4_green, LOW);
-    digitalWrite(in_1, LOW); // 
-    digitalWrite(in_2, HIGH); //
-    //digitalWrite(en,HIGH);   // moved to PWM
-    ledcWrite(ledChannel, _speed);
-    
-  } // of go_fwd()
-
-  void go_back(int _speed) {
-    digitalWrite(Led2_yellow, LOW);
-    digitalWrite(Led3_blue, LOW);  
-    digitalWrite(Led4_green, HIGH);
-    digitalWrite(in_1, HIGH); // 
-    digitalWrite(in_2, LOW); // 
-    //digitalWrite(en,HIGH);
-    ledcWrite(ledChannel, _speed);
-  } // of go_back()
-
-  void make_buzz(int _buz_time) {
-    digitalWrite(Buzzer_pin, HIGH);
-    delay(_buz_time);
-    digitalWrite(Buzzer_pin, LOW);
-  } // of make_buzz()
-
-}; // of class motor_control
-
 
 
 motor_control motor_1;
 motor_control motor_2;
+leds led_stop;
+leds led_fwd;
+leds led_bck;
+
+UltraSonic_sensor  dist_sensor_1;
+UltraSonic_sensor  dist_sensor_2;
+
+car my_car;
+
+buzzer buzzer;
 
 
-// ********************* SETUP
+// ********************* SETUP ****************************
 void setup() {
   Serial.begin(9600);
   
@@ -146,35 +109,32 @@ void setup() {
   //pinMode(EN1_Pin, OUTPUT); // changes to PWM
   pinMode(IN1A_Pin, OUTPUT);
   pinMode(IN1B_Pin, OUTPUT);
-  pinMode(EN2_Pin, OUTPUT);
+  //pinMode(EN2_Pin, OUTPUT);
   pinMode(IN2A_Pin, OUTPUT);
   pinMode(IN2B_Pin, OUTPUT);
 
-  pinMode(trigPin, OUTPUT); 
-  pinMode(echoPin, INPUT); 
+  pinMode(trigPin1, OUTPUT); 
+  pinMode(echoPin1, INPUT); 
+  pinMode(trigPin2, OUTPUT); 
+  pinMode(echoPin2, INPUT); 
 
-  // configure LED PWM functionalitites
-  ledcSetup(ledChannel, freq, resolution);
-  // attach the channel to the GPIO to be controlled
-  ledcAttachPin(EN1_Pin, ledChannel);
+  dist_sensor_1._trig = trigPin1;
+  dist_sensor_1._echo = echoPin1;
+  dist_sensor_2._trig = trigPin2;
+  dist_sensor_2._echo = echoPin2;
+    
+  my_car.motors_right.init(EN1_Pin,IN1A_Pin,IN1B_Pin,freq,resolution,ledChannel0);
+  my_car.motors_left.init(EN2_Pin,IN2A_Pin,IN2B_Pin,freq,resolution,ledChannel2);
 
+  my_car.f_sns.init(trigPin1,echoPin1);
+  my_car.b_sns.init(trigPin2,echoPin2);
 
+  led_stop._led = Led2_yellow;
+  led_fwd._led = Led3_blue;
+  led_bck._led = Led4_green;
 
-
-  motor_1.en   = EN1_Pin;
-  motor_1.in_1 = IN1A_Pin;
-  motor_1.in_2 = IN1B_Pin;
-  motor_1.stop();
-  
-  motor_2.en   = EN2_Pin;
-  motor_2.in_1 = IN2A_Pin;
-  motor_2.in_2 = IN2B_Pin;
-  motor_2.stop();
-
-
-  //tmp = HIGH;
-
-  
+  buzzer._buz_pin = Buzzer_pin;
+ 
 
   // setup ESPnow to recieve from remote control
   WiFi.mode(WIFI_STA); // Set device as a Wi-Fi Station
@@ -187,9 +147,6 @@ void setup() {
     Serial.print("..Error init ESP-NOW.......");
     return;
   } // of if()
-
-
-
   
   // register for Send CB to, get status of Trasnmitted packet
   esp_now_register_send_cb(OnDataSent);
@@ -220,95 +177,72 @@ int tmp_speed=777;
 
 // for delay function
 int period = 50;
-unsigned long time_now = 0;
+
 int ADC_val = 0;
 
+int i;
 
-// ************   LOOP
+// *************************** MAIN **********************************
 void loop() {
 
-  int dist = measure_it();
-  Serial.println(dist);
-  wait_millies(100);
-
+  my_car.go_f_auto();
   return;
 
-  for (int i=255;i>100;i-=10) {
+  my_car.go_fwd(200);
+  wait_millies(3000);
+  my_car.stop();
+  wait_millies(1000);
+  my_car.go_bck(200);
+  wait_millies(3000);
+  my_car.stop();
+  wait_millies(1000);
+  return;
+
+
+
+  //int dist = measure_it();
+  int dist1 = dist_sensor_1.measure_it();
+  int dist2 = dist_sensor_2.measure_it();
+
+  Serial.print(dist1);
+  Serial.print(".......");
+  Serial.println(dist2);
+  
+  digitalWrite(Buzzer_pin,HIGH);
+//buzzer.set_buzzer_on();
+  //for (int i=255;i>150;i-=20) {
+    i=255;
+    led_fwd.set_led_on();
+    led_bck.set_led_off();
     motor_1.go_fwd(i);
+    motor_2.go_fwd(i);
     Serial.print("FWD ");
     Serial.println(i);
     wait_millies(5000);
-  }
+    //buzzer.set_buzzer_off();
+    digitalWrite(Buzzer_pin,LOW);
+  //};
 
-;
+  //for (int i=255;i>150;i-=20) {
+    i=255;
+    led_fwd.set_led_off();
+    led_bck.set_led_on();
+    motor_1.go_back(i);
+    motor_2.go_back(i);
+    Serial.print("BACK ");
+    Serial.println(i);
+    wait_millies(5000);
+  //};
 
-  motor_1.go_fwd(128);
-  Serial.println("FWD 128 for 5 seconds");
-  wait_millies(5000);
 
-  motor_1.go_fwd(24);
-  Serial.println("FWD 24 for 5 seconds");
-  wait_millies(5000);
-  
-  motor_1.stop();
-  Serial.println("STOP for 1 second");
-  wait_millies(1000);
+  return;
+  /*
 
-  motor_1.go_back(255);
-  Serial.println("BCK 255 for 5 seconds");
-  wait_millies(5000);
 
-  motor_1.stop();
-  Serial.println("STOP for 1 second");
-  wait_millies(1000);
 
   return;
 
-
-    digitalWrite(IN1A_Pin, LOW);  
-    digitalWrite(IN1B_Pin, HIGH); 
-    //ledcWrite(ledChannel, 255);
-    motor_1.go_fwd(255);
-    digitalWrite(Led2_yellow, HIGH);
-    digitalWrite(Led3_blue, LOW);  
-    digitalWrite(Led4_green, LOW);
-    Serial.println("255");
-    delay(3000);
-
-    ledcWrite(ledChannel, 128);
-    digitalWrite(Led2_yellow, LOW);
-    digitalWrite(Led3_blue, HIGH);  
-    digitalWrite(Led4_green, LOW);
-    Serial.println("128");
-    delay(3000);
-
-    ledcWrite(ledChannel, 80);
-    digitalWrite(Led2_yellow, LOW);
-    digitalWrite(Led3_blue, LOW);  
-    digitalWrite(Led4_green, HIGH);
-    Serial.println("80");
-    delay(3000);
     
-return;
-
- // increase the LED brightness
-  for(int dutyCycle = 0; dutyCycle <= 255; dutyCycle+=80 ){   
-    // changing the LED brightness with PWM
-    ledcWrite(ledChannel, dutyCycle);
-    Serial.print(dutyCycle);
-    Serial.println("...");
-    delay(3000);
-  }
-
-  return;
-
-
-
-
-  time_now = millis();
-  while(millis() < time_now + period){
-        //wait approx. [period] ms
-    }
 
   sensors.requestTemperatures(); 
   float temperatureC = sensors.getTempCByIndex(0);
@@ -355,20 +289,16 @@ return;
     return;
   }  // if()
 
+*/
 
 } // of main()
+// *************************************************************
 
 
-void wait_millies(int _period) {
-  time_now = millis();
-  while(millis() < time_now + _period){
-        //wait approx. [period] ms
-    } // of while() 
+// *************************************************************
 
-} // of wait_millies()
-
-// callback function that will be executed when data is received
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  // callback function that will be executed when data is received
   memcpy(&TrainCMD, incomingData, sizeof(TrainCMD));
   Serial.print("Bytes received: ");
   Serial.println(len);
@@ -384,18 +314,5 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   Serial.println(TrainCMD.buzz_time);
   Serial.print("speed: ");
   Serial.println(TrainCMD.speed);
-
   Serial.println("................................");
 } // of OnDataRecv()
-
-int measure_it() {
-  int duration = 0;
-  digitalWrite(trigPin, LOW); 
-  delayMicroseconds(2); 
-  digitalWrite(trigPin, HIGH); 
-  delayMicroseconds(10); 
-  digitalWrite(trigPin, LOW); 
-  duration = pulseIn(echoPin, HIGH);
-  int distance = (duration*.0343)/2;
-  return(distance);
-} // of measure_it
