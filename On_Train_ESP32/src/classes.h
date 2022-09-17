@@ -1,3 +1,8 @@
+#include <esp_now.h>
+#include <WiFi.h>
+#include <OneWire.h> // for the temp sensor (one wire bus)
+#include <DallasTemperature.h>
+
 void wait_millies(int _period) {
     unsigned long time_now = millis();
   while(millis() < time_now + _period){
@@ -5,6 +10,8 @@ void wait_millies(int _period) {
     } // of while() 
 
 } // of wait_millies()
+
+
 
 class leds {
     public:
@@ -139,7 +146,7 @@ class car {
     const int ledChannel2 = 2;
     const int resolution = 8;
 
-    int dist_th = 10;       // distance from obstacle to make the car stop
+    int dist_th = 50;       // distance from obstacle to make the car stop
     int turn_time = 100;    // minimal time per turn
 
     motor_control motors_left;
@@ -151,6 +158,8 @@ class car {
     UltraSonic_sensor f_sns;
     UltraSonic_sensor b_sns;
 
+   
+
     void init() {
         
         // TBD
@@ -161,17 +170,17 @@ class car {
     void go_fwd(int _speed) {
         motors_left.go_fwd(_speed);
         motors_right.go_fwd(_speed);
-    } // of go_f_auto
+    } // of go_fwd()
 
     void go_bck(int _speed) {
         motors_left.go_back(_speed);
         motors_right.go_back(_speed);
-    } // of go_f_auto
+    } // of go_bck()
 
     void stop() {
         motors_left.go_back(0);
         motors_right.go_back(0);
-    } // of go_f_auto
+    } // of stop()
 
     void turn_left(int _tm) {
         motors_left.go_fwd(_tm);
@@ -191,27 +200,22 @@ class car {
         int d1 = f_sns.measure_it();
         int d2 = b_sns.measure_it();
 
-        Serial.print(d1);
-        Serial.print("/");
-        Serial.println(d2);
-
+  
         if (d1 < dist_th) {
-            turn_left(150);
+            stop();
+            wait_millies(50);
+            go_fwd(200);
             wait_millies(500);
+            turn_left(200);
+            wait_millies(500);
+            go_bck(200);
         }
         else { 
-            go_fwd(200);
+            go_bck(200);
         } // of else()
 
 
 
-
-        /*
-        if (d2 < dist_th) {
-            turn_right(100);
-            wait_millies(turn_time);
-        }
-*/
 
     } // of go_f_auto
 

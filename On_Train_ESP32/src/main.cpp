@@ -1,8 +1,7 @@
-//#include <Arduino.h>
-#include <esp_now.h>
-#include <WiFi.h>
-#include <OneWire.h> // for the temp sensor (one wire bus)
-#include <DallasTemperature.h>
+//#include <esp_now.h>
+//#include <WiFi.h>
+//#include <OneWire.h> // for the temp sensor (one wire bus)
+//#include <DallasTemperature.h>
 
 #include <classes.h>
 
@@ -27,14 +26,15 @@ int echoPin1 = 27;
 const int trigPin2 = 33;  
 const int echoPin2 = 35; 
 
+
+
+
+
 // for PWM (driving motors)
 const int freq = 5000;
 const int ledChannel0 = 0;
 const int ledChannel2 = 2;
 const int resolution = 8;
-
-void wait_millies(int _period);
-int measure_it();
 
 // Setup a oneWire instance to communicate with any OneWire devices
 OneWire oneWire(Temperature_pin);
@@ -80,11 +80,8 @@ void onSent(uint8_t *mac_addr, uint8_t sendStatus) {
 } // of onSent()
 
 
-
-
-
-motor_control motor_1;
-motor_control motor_2;
+//motor_control motor_1;
+//motor_control motor_2;
 leds led_stop;
 leds led_fwd;
 leds led_bck;
@@ -166,7 +163,7 @@ void setup() {
   } // of if()
 
 // Start the DS18B20 sensor
-  sensors.begin();
+  //sensors.begin();
 
   Serial.println("end of Setup()");
 } // of setup()
@@ -182,9 +179,9 @@ int ADC_val = 0;
 
 int i;
 
-// *************************** MAIN **********************************
+// *************************** MAIN  LOOP **********************************
 void loop() {
-
+  
   my_car.go_f_auto();
   return;
 
@@ -199,51 +196,7 @@ void loop() {
   return;
 
 
-
-  //int dist = measure_it();
-  int dist1 = dist_sensor_1.measure_it();
-  int dist2 = dist_sensor_2.measure_it();
-
-  Serial.print(dist1);
-  Serial.print(".......");
-  Serial.println(dist2);
-  
-  digitalWrite(Buzzer_pin,HIGH);
-//buzzer.set_buzzer_on();
-  //for (int i=255;i>150;i-=20) {
-    i=255;
-    led_fwd.set_led_on();
-    led_bck.set_led_off();
-    motor_1.go_fwd(i);
-    motor_2.go_fwd(i);
-    Serial.print("FWD ");
-    Serial.println(i);
-    wait_millies(5000);
-    //buzzer.set_buzzer_off();
-    digitalWrite(Buzzer_pin,LOW);
-  //};
-
-  //for (int i=255;i>150;i-=20) {
-    i=255;
-    led_fwd.set_led_off();
-    led_bck.set_led_on();
-    motor_1.go_back(i);
-    motor_2.go_back(i);
-    Serial.print("BACK ");
-    Serial.println(i);
-    wait_millies(5000);
-  //};
-
-
-  return;
   /*
-
-
-
-  return;
-
-    
-
   sensors.requestTemperatures(); 
   float temperatureC = sensors.getTempCByIndex(0);
   
