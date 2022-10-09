@@ -42,22 +42,55 @@ class UltraSonic_sensor {
     public:
     int _trig;
     int _echo;
+    int dist_val_th = 20; // 20 cm
 
     void init(int __trig, int __echo) {
         _trig = __trig;
         _echo = __echo; 
     } // of init()
     
-    int measure_it() {
+    bool measure_it() {
+        unsigned long timeout = 4000;
+        unsigned long t0 = millis();
+
         int duration = 0;
         digitalWrite(_trig, LOW); 
         delayMicroseconds(2); 
         digitalWrite(_trig, HIGH); 
         delayMicroseconds(10); 
         digitalWrite(_trig, LOW); 
-        duration = pulseIn(_echo, HIGH);
+        duration = pulseIn(_echo, HIGH,timeout);
+        unsigned long t1 = millis();
+
         int distance = (duration*.0343)/2;
-        return(distance);
+        if (duration==0) {
+            // ignore the value. either sensor is not working 
+            // or dist is too far
+            return (false);
+        }
+
+        unsigned long t2 = millis();
+/*        
+        Serial.print(t0);
+        Serial.print(".");
+        Serial.print(t1);
+        Serial.print(".");
+        Serial.print(t2);
+        Serial.print(".");
+        Serial.print(duration);
+        Serial.print("...");
+        Serial.println(distance);
+  */      
+        if (distance<dist_val_th) {
+            // close to the obstecle 
+            return(true);
+        }
+        else {
+            // go on driving
+            return (false);
+        }
+         
+        //return(distance);
     } // of measure_it
   }; // of UltraSonic_sensor()
 
@@ -197,11 +230,12 @@ class car {
     void go_f_auto() {
         //int d1 = _sens_f.measure_it();
         //int d2 = _sens_b.measure_it();
-        int d1 = f_sns.measure_it();
-        int d2 = b_sns.measure_it();
+        //int d1 = f_sns.measure_it();
+        //int d2 = b_sns.measure_it();
 
   
-        if (d1 < dist_th) {
+        if (f_sns.measure_it()) {
+            Serial.print(".");
             stop();
             wait_millies(50);
             go_fwd(200);
@@ -211,6 +245,7 @@ class car {
             go_bck(200);
         }
         else { 
+            Serial.print("x");
             go_bck(200);
         } // of else()
 
